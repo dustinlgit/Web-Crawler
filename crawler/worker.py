@@ -36,6 +36,7 @@ class Worker(Thread):
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
             # passes the downloaded information to the scraper function to get new links
+            # this is what we are implementing
             scraped_urls = scraper.scraper(tbd_url, resp)
             # utilizes the fronter from here to:
                 # retireve URLS with get_tbd_url(), add new URLS to the fornter add_url(), then mark them as completed mark_url_complete()

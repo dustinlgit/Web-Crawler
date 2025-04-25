@@ -7,6 +7,13 @@ class Crawler(object):
     this is an important process, which is why it is __init__.py 
     this will create the frontier and worker objects
         based on the thread count, that is the amount of workers that are created
+
+    Crawler
+    └──> Frontier: Get next URL
+            └──> Worker: Fetch & scrape page
+                └──> Scraper: Extract data + new URLs
+                        └──> Frontier: Add new URLs
+
     '''
     def __init__(self, config, restart, frontier_factory=Frontier, worker_factory=Worker):
         self.config = config
