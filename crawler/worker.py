@@ -26,12 +26,12 @@ class Worker(Thread):
         
     def run(self):
         while True:
-            tbd_url = self.frontier.get_tbd_url()
+            tbd_url = self.frontier.get_tbd_url() # get a url from the frontier here
             if not tbd_url:
-                self.logger.info("Frontier is empty. Stopping Crawler.")
+                self.logger.info("Frontier is empty. Stopping Crawler.") # stops crawling because nothing else... makes sense
                 break
             # download function is form utils/download.py to fetch content of a URL
-            resp = download(tbd_url, self.config, self.logger) 
+            resp = download(tbd_url, self.config, self.logger) # download returns 
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
