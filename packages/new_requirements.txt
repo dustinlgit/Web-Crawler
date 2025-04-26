@@ -1,0 +1,11 @@
+beautifulsoup4==4.13.4
+cbor==1.0.0
+certifi==2025.4.26
+charset-normalizer==3.4.1
+idna==3.10
+readerwriterlock==1.0.9
+requests==2.32.3
+soupsieve==2.7
+spacetime @ file:///home/ics-home/cs121/Web-Crawler/packages/spacetime-2.1.1-py3-none-any.whl#sha256=6098adbff9fe0896709944c71d608adaf4a5e6fe270ab8971d90b9c64dda6c8f
+typing_extensions==4.13.2
+urllib3==2.4.0

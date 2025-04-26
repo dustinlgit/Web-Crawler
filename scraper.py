@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 from utils import get_logger, normalize
-scrap_logger = get_logger("SCRAPPER")
+scrapper_log = get_logger("SCRAPPER")
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -60,7 +60,7 @@ def extract_next_links(url, resp):
             links.append(clean_url)
 
     except Exception as e:
-        scrap_logger.fatal(f"Error parsing {url}: {e}")
+        scrapper_log.fatal(f"Error parsing {url}: {e}")
 
     return links
 
