@@ -3,6 +3,9 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
+from utils import get_logger, normalize
+scrap_logger = get_logger("SCRAPPER")
+
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
@@ -53,6 +56,7 @@ def extract_next_links(url, resp):
             # remove anyhting that starts iwth # sincei  keep seeing this and it means nothing
             clean_url = normalize(parsed._replace(query="", fragment="").geturl())
 
+            print(f"Found link: {clean_url}") 
             links.append(clean_url)
 
     except Exception as e:
