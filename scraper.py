@@ -1,6 +1,8 @@
 import re
 from urllib.parse import urlparse
 
+from bs4 import BeautifulSoup
+
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
@@ -17,7 +19,47 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    return list()
+
+    # simple check to see if the status code is OK => if it is NOT 200 (ok) then we need to say why, so we call out reps.error
+    if resp.status != 200:
+        print(f'Error code: {resp.error}')
+        return []
+    
+    # BeautifulSoup will turn the web page into html content so i can find a specific element by tag and more...
+    # resp.raw_response.content: the content of the page!
+    # use the html.parse of beautifulsoup
+    soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+    # print(f"response: {resp.raw_response.url}") 
+    # print(f"response: {resp.raw_response.content}") 
+
+    # # i will store all the links in a list
+    links = []
+    '''    
+    legacy version 1:
+    for hyperlink in soup.find_all('a', href=True): # i want to find all a tags where href has something
+        link = hyperlink['href']
+        print(f"Found link: {link}") 
+        links.append(link)
+    '''
+    try:
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+        for anchor in soup.find_all('a', href=True):
+            link = anchor.get('href')
+            
+            # convert relative url to absolute url
+            abs_url = urljoin(url, link)
+            parsed = urlparse(abs_url)
+
+            # remove anyhting that starts iwth # sincei  keep seeing this and it means nothing
+            clean_url = normalize(parsed._replace(query="", fragment="").geturl())
+
+            links.append(clean_url)
+
+    except Exception as e:
+        scrap_logger.fatal(f"Error parsing {url}: {e}")
+
+    return links
+
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
