@@ -1,13 +1,59 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 from bs4 import BeautifulSoup
+from scraper_utils.fingerprint import get_fp
+from scraper_utils.similarity import is_similar_to_visited
 
 from utils import get_logger, normalize
 scrapper_log = get_logger("SCRAPPER")
 
+
+# create a set of fingerprints, which are the last visted ones, so we dont look at similar stuff
+# uses the methods from the slides
+
+visited_sites_fingerprint = set()
+THRESHOLD = 0.8 # 80% for now
+
 def scraper(url, resp):
+    # Validate URL
+    if not is_valid(url):
+        return []  # Skip if URL is not valid
+    
+    # Clean URL by removing fragment
+
+    # Clean URL will be added to set and len(set) would be # of unique URLs
+
+    # Track subdomain count
+
+
+    # Compute longest page
+
+
+    # Update the word counter (excluding stop words) 
+
+
+
+    ''' FINGERPRINT CODE STARTS HERE '''
+    #create fingerprint
+    #decode content to string because its a byte
+    page_content = resp.raw_response.content.decode('utf-8', errors='ignore')
+    fingerprint = get_fp(page_content)
+
+    # then check if the curr page is a near dupe of ANY prev page
+        #if it is a dupe, then we dont add it, so SKIP scrawling the page
+    if is_similar_to_visited(fingerprint, visited_sites_fingerprint, THRESHOLD):
+        print(f"Skipping duplicate page: {url}")
+        return [] # So that we skip crawling when its a dupe/near-dupe
+    
+    # If it is not a dupe then add it to the visted set
+    visited_sites_fingerprint.add(fingerprint)
+    ''' FINGERPRINT CODE ENDS HERE '''
+    
+    # We extract the links, all of them from the page
     links = extract_next_links(url, resp)
+
+    # Then just return the links that need to be crawled
     return [link for link in links if is_valid(link)]
 
 ''' IMPLEMENT THIS PART => scraper is important for the worker class'''
@@ -32,7 +78,6 @@ def extract_next_links(url, resp):
     # resp.raw_response.content: the content of the page!
 
     # use the html.parse of beautifulsoup
-    soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
     # print(f"response: {resp.raw_response.url}") 
     # print(f"response: {resp.raw_response.content}") 
 
@@ -57,13 +102,13 @@ def extract_next_links(url, resp):
             # remove anyhting that starts iwth # sincei  keep seeing this and it means nothing
             clean_url = normalize(parsed._replace(query="", fragment="").geturl())
 
-            print(f"Found link: {clean_url}") 
+            # print(f"Found link: {clean_url}") 
             links.append(clean_url)
 
     except Exception as e:
         scrapper_log.fatal(f"Error parsing {url}: {e}")
 
-    return links
+    return list(links)
 
 
 def is_valid(url):
@@ -97,12 +142,13 @@ def is_valid(url):
                 + r"|thmx|mso|arff|rtf|jar|csv"
                 + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
         
-        # Case for today.uci.edu
+        # Case for today.uci.edu since we only accept this specific path
         if domain == "today.uci.edu" and path.startswith(today_uci_path):
             return True
 
+        # True conditions weren't triggered so we exit
         return False
-
+    
     except TypeError:
         print ("TypeError for ", parsed)
         raise
