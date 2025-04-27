@@ -12,7 +12,7 @@ from utils import get_logger, normalize
 from scraper_utils.fingerprint import get_fp
 from scraper_utils.similarity import is_similar_to_visited
 from scraper_utils.tokenizer import tokenize
-from scraper_utils.prompt_answers.answers import track_unique_urls, track_subdomains, track_longest_page, update_top50_words
+from scraper_utils.answers import track_unique_urls, track_subdomains, track_longest_page, update_top50_words
 
 
 TIMEOUT_LIMIT = 60 * 5
@@ -195,7 +195,7 @@ def is_valid(url):
             return False
 
         # Exclude calendar and event-related URLs
-        if "/calendar" in path or "/events" in path or "date=" in query or "year=" in query or "month=" in query:
+        if "/events_calendar" in path or "/calendar" in path or "/events" in path or "date=" in query or "year=" in query or "month=" in query:
             scrap_logger.info(f"Skipping calendar/event URL: {url}")
             return False
 
