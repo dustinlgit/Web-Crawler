@@ -4,6 +4,10 @@ import time
 from bs4 import BeautifulSoup
 import shelve
 
+import io
+import PyPDF2
+import PyPDF2.errors
+
 from utils import get_logger, normalize
 from scraper_utils.fingerprint import get_fp
 from scraper_utils.similarity import is_similar_to_visited
@@ -13,7 +17,7 @@ from scraper_utils.prompt_answers.answers import track_unique_urls, track_subdom
 TIMEOUT_LIMIT = 60 * 5
 start_time = time.time()
 
-scrapper_log = get_logger("SCRAPPER")
+scrapper_logger = get_logger("SCRAPPER")
 visited_urls = set()
 visited_sites_fingerprint = set()
 THRESHOLD = 0.8
@@ -25,13 +29,34 @@ subdomain_count = {}
 top50words = {}
 
 def scraper(url, resp):
-    global longest_page_word_count 
-    if time.time() - start_time > TIMEOUT_LIMIT:
-        scrapper_log.info(f"Timeout limit of {TIMEOUT_LIMIT / 60} minutes exceeded. Stopping scraper.")
+    global longest_page_word_count
+
+    # Check that the response status is ok and that the raw response has content
+    if resp.status != 200 or resp.raw_response is None:
+        if resp.status >= 300 and resp.status < 400:
+            redirect_url = resp.raw_response.headers.get("Location")
+
+            scrapper_logger.warning(f"Status {resp.status}: Redirecting {url} -> {redirect_url}")
+            return  [redirect_url] if is_valid(redirect_url) else []
+        else:
+            scrapper_logger.warning(f"Skipping URL {url}: Invalid response or status {resp.status}")
+            return []
+
+    if is_pdf_resp(url, resp):
+        scrapper_logger.warning(f"Skipping {url}: pdf file")
         return []
+    
+    if is_zip_resp(url, resp):
+        scrapper_logger.warning(f"Skipping {url}: zip file")
+        return []
+
+    if is_attachment_resp(url, resp):
+        scrapper_logger.warning(f"Skipping {url}: downloads attachment")
+        return []
+
     # Return empty list if no valid response
     if not resp.raw_response:
-        scrapper_log.error(f"Invalid response or no raw content for URL: {url}")
+        scrapper_logger.error(f"Invalid response or no raw content for URL: {url}")
         return [] 
     
     track_unique_urls(url, visited_urls)
@@ -111,7 +136,7 @@ def extract_next_links(url, resp):
             links.append(clean_url)
 
     except Exception as e:
-        scrapper_log.fatal(f"Error parsing {url}: {e}")
+        scrapper_logger.fatal(f"Error parsing {url}: {e}")
 
     return list(links)
 
@@ -165,3 +190,54 @@ def save_to_shelve(filename="scraper_results"):
         db['longest_page_word_count'] = longest_page_word_count
         db['top50words'] = top50words
         db['subdomain_count'] = subdomain_count
+
+def is_pdf_resp(url, resp):  
+    content_type = resp.raw_response.headers.get("Content-Type", "").lower()
+    
+    # Check Content-Type header
+    if "application/pdf" is content_type: 
+        return True
+    
+    # 
+    try:
+        with io.BytesIO(resp.raw_response.content) as pdf_stream: 
+            reader = PyPDF2.PdfReader(pdf_stream)
+            return bool(reader.pages)
+    except PyPDF2.errors.PdfReadError:
+        return False
+
+def is_zip_resp(url, resp):
+    content_type = resp.raw_response.headers.get("Content-Type", "").lower()
+
+    if "application/zip" is content_type: 
+        return True
+    
+    return False
+
+def is_html_resp(url, resp):
+    content_type = resp.raw_response.headers.get("Content-Type", "").lower()
+
+    if content_type.startswith("text/html"):
+        return True
+    
+    return False
+
+def is_attachment_resp(url, resp): 
+    content_disposition = resp.raw_response.headers.get("Content-Disposition", "").lower()
+
+    if "attachment" in content_disposition:
+        return True
+
+    return False
+
+def is_large_resp(url, resp, threshold): 
+    content_length = resp.raw_response.headers.get("Content-Length", "")
+
+    try:
+        content_length = int(content_length)
+        if content_length > threshold: 
+            return True
+    except: 
+        return False
+    
+    return False
