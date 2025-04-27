@@ -229,12 +229,19 @@ def is_valid(url):
 
 # for report
 def save_to_shelve(filename="scraper_results"):
-    with shelve.open(filename) as db:
-        db['unique_count'] = unique_count
-        db['longest_page_url'] = longest_page_url
-        db['longest_page_word_count'] = longest_page_word_count
-        db['top50words'] = top50words
-        db['subdomain_count'] = subdomain_count
+    """
+    Save the scraping results to a shelve database.
+    """
+    try:
+        with shelve.open(filename) as db:
+            db['unique_count'] = unique_count
+            db['longest_page_url'] = longest_page_url
+            db['longest_page_word_count'] = longest_page_word_count
+            db['top50words'] = sorted(top50words.items(), key=lambda x: x[1], reverse=True)[:50]
+            db['subdomain_count'] = subdomain_count
+        scrap_logger.info(f"Scraping results saved to {filename}.")
+    except Exception as e:
+        scrap_logger.error(f"Error saving to shelve: {e}")
 
 def is_pdf_resp(url, resp):
     content_type = resp.raw_response.headers.get("Content-Type", "").lower()
