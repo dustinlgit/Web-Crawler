@@ -14,10 +14,11 @@ from scraper_utils.similarity import is_similar_to_visited
 from scraper_utils.tokenizer import tokenize
 from scraper_utils.prompt_answers.answers import track_unique_urls, track_subdomains, track_longest_page, update_top50_words
 
+
 TIMEOUT_LIMIT = 60 * 5
 start_time = time.time()
 
-scrapper_logger = get_logger("SCRAPPER")
+scrap_logger = get_logger("SCRAPPER")
 visited_urls = set()
 visited_sites_fingerprint = set()
 THRESHOLD = 0.8
@@ -31,33 +32,41 @@ top50words = {}
 def scraper(url, resp):
     global longest_page_word_count
 
-    # Check that the response status is ok and that the raw response has content
     if resp.status != 200 or resp.raw_response is None:
         if resp.status >= 300 and resp.status < 400:
             redirect_url = resp.raw_response.headers.get("Location")
 
-            scrapper_logger.warning(f"Status {resp.status}: Redirecting {url} -> {redirect_url}")
+            scrap_logger.warning(f"Status {resp.status}: Redirecting {url} -> {redirect_url}")
             return  [redirect_url] if is_valid(redirect_url) else []
         else:
-            scrapper_logger.warning(f"Skipping URL {url}: Invalid response or status {resp.status}")
+            scrap_logger.warning(f"Skipping URL {url}: Invalid response or status {resp.status}")
             return []
 
     if is_pdf_resp(url, resp):
-        scrapper_logger.warning(f"Skipping {url}: pdf file")
+        scrap_logger.warning(f"Skipping {url}: pdf file")
         return []
     
     if is_zip_resp(url, resp):
-        scrapper_logger.warning(f"Skipping {url}: zip file")
+        scrap_logger.warning(f"Skipping {url}: zip file")
         return []
 
     if is_attachment_resp(url, resp):
-        scrapper_logger.warning(f"Skipping {url}: downloads attachment")
+        scrap_logger.warning(f"Skipping {url}: downloads attachment")
         return []
+    
+    # parse as html document
+    try:
+        # Get the text from the html response
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
 
-    # Return empty list if no valid response
-    if not resp.raw_response:
-        scrapper_logger.error(f"Invalid response or no raw content for URL: {url}")
-        return [] 
+        # Remove the text of CSS, JS, metadata, alter for JS, embeded websites
+        for markup in soup.find_all(["style", "script", "meta", "noscript", "iframe"]):  
+            markup.decompose()  # remove all markups stated above
+        
+        # soup contains only human-readable texts now to be compared near-duplicate
+        text = soup.get_text(separator=" ", strip=True)
+    except Exception as e:
+        scrap_logger.fatal(f"Error parsing {url}: {e}")
     
     track_unique_urls(url, visited_urls)
     track_subdomains(url, subdomain_count)
@@ -65,6 +74,7 @@ def scraper(url, resp):
     text = soup.get_text()
     track_longest_page(url, text)
     update_top50_words(text, top50words)
+
     ''' FINGERPRINT CODE STARTS HERE '''
     #create fingerprint
     #decode content to string because its a byte
@@ -84,7 +94,19 @@ def scraper(url, resp):
     # We extract the links, all of them from the page
     links = extract_next_links(url, resp)
     # Then just return the links that need to be crawled
-    return [link for link in links if is_valid(link)]
+    # return [link for link in links if is_valid(link)]
+    unique_links = set()
+    for link in links:
+        if not link:
+            scrap_logger.info("Filtered out an empty or none URL")
+        elif link in unique_links:
+            scrap_logger.info(f"Filtered out duplicate URL: {link}")
+        elif not is_valid(link):
+            scrap_logger.info(f"Filtered out invalid URL: {link}")
+        else:
+            unique_links.add(link)
+
+    return list(unique_links)
 
 ''' IMPLEMENT THIS PART => scraper is important for the worker class'''
 
@@ -136,7 +158,7 @@ def extract_next_links(url, resp):
             links.append(clean_url)
 
     except Exception as e:
-        scrapper_logger.fatal(f"Error parsing {url}: {e}")
+        scrap_logger.fatal(f"Error parsing {url}: {e}")
 
     return list(links)
 
@@ -191,19 +213,25 @@ def save_to_shelve(filename="scraper_results"):
         db['top50words'] = top50words
         db['subdomain_count'] = subdomain_count
 
-def is_pdf_resp(url, resp):  
+def is_pdf_resp(url, resp):
     content_type = resp.raw_response.headers.get("Content-Type", "").lower()
     
-    # Check Content-Type header
-    if "application/pdf" is content_type: 
+    # First, check Content-Type header
+    if "application/pdf" in content_type:
         return True
     
-    # 
     try:
-        with io.BytesIO(resp.raw_response.content) as pdf_stream: 
+        with io.BytesIO(resp.raw_response.content) as pdf_stream:
+            start = pdf_stream.read(5)
+            if start != b"%PDF-":
+                return False  # Definitely not a PDF
+            
+            # Reset pointer to beginning
+            pdf_stream.seek(0)
+            
             reader = PyPDF2.PdfReader(pdf_stream)
             return bool(reader.pages)
-    except PyPDF2.errors.PdfReadError:
+    except Exception:
         return False
 
 def is_zip_resp(url, resp):
