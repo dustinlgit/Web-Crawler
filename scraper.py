@@ -4,6 +4,7 @@ from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 from scraper_utils.fingerprint import get_fp
 from scraper_utils.similarity import is_similar_to_visited
+from scraper_utils.tokenizer import tokenize
 
 from utils import get_logger, normalize
 scrapper_log = get_logger("SCRAPPER")
@@ -11,28 +12,75 @@ scrapper_log = get_logger("SCRAPPER")
 
 # create a set of fingerprints, which are the last visted ones, so we dont look at similar stuff
 # uses the methods from the slides
+visited_urls = set()
+subdomain_count = {}
 
 visited_sites_fingerprint = set()
 THRESHOLD = 0.8 # 80% for now
 
+# Global variable to store num unique urls
+unique_count = 0
+
+# Global variable to keep track of the longest page
+longest_page_url = None
+longest_page_word_count = 0
+
+# Global variables for tracking common words
+top50words = {}  # word : count we will get top 50 from here
+
 def scraper(url, resp):
-    # Validate URL
-    if not is_valid(url):
-        return []  # Skip if URL is not valid
+    # Return empty list if no valid response
+    if not resp.raw_response:
+        scrapper_log.error(f"Invalid response or no raw content for URL: {url}")
+        return [] 
     
+    '''UNIQUE STARTS HERE'''
     # Clean URL by removing fragment
-
+    clean_url = urlparse(url)._replace(fragment="").geturl()
     # Clean URL will be added to set and len(set) would be # of unique URLs
+    visited_urls.add(clean_url)
+    unique_count = len(visited_urls)
+    #I'll store end result using dif function
+    '''UNIQUE ENDS HERE'''
 
+    '''SUBDOMAIN STARTS HERE'''
     # Track subdomain count
+    subdomain = urlparse(url).netloc.split('.')[0]
+    if subdomain in subdomain_count:
+        subdomain_count[subdomain] += 1
+    else:
+        subdomain_count[subdomain] = 1
+    #I'll store end result using dif function
+    '''SUBDOMAIN ENDS HERE'''
 
+    # Extract text
+    soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+    text = soup.get_text()
+
+    '''LONGEST PG STARTS HERE'''
+    # Split the text into words (this will give a list of words)
+    words = text.split()
 
     # Compute longest page
+    word_count = len(words)  # Count the number of words
 
+    if word_count > longest_page_word_count:
+        longest_page_url = url
+        longest_page_word_count = word_count
+        #I'll store end result using dif function
+    '''LONGEST PG ENDS HERE'''
 
+    '''TOP 5O STARTS HERE'''
     # Update the word counter (excluding stop words) 
-
-
+    words = tokenize(text)
+    for word in words:
+        word = word.lower()  # convert to lowercase to count words case-insensitively
+        if word in top50words:
+            top50words[word] += 1
+        else:
+            top50words[word] = 1
+    #I'll store end result using dif function
+    '''TOP 50 ENDS HERE'''
 
     ''' FINGERPRINT CODE STARTS HERE '''
     #create fingerprint
