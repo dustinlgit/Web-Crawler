@@ -158,6 +158,15 @@ def extract_next_links(url, resp):
 
             # remove anyhting that starts iwth # sincei  keep seeing this and it means nothing
             clean_url = normalize(parsed._replace(query="", fragment="").geturl())
+            
+            # gitlab and github are bad
+            if "gitlab.com" in clean_url or "github.com" in clean_url:
+                scrap_logger.info(f"Skipping GitLab/GitHub URL: {clean_url}")
+                continue
+
+            if not clean_url:
+                scrap_logger.info("Skipping empty or malformed URL")
+                continue
 
             # print(f"Found link: {clean_url}") 
             links.append(clean_url)
@@ -168,9 +177,8 @@ def extract_next_links(url, resp):
     return list(links)
 
 def is_valid(url):
-    # Decide whether to crawl this url or not. 
-    # If you decide to crawl it, return True; otherwise return False.
-    # There are already some conditions that return False.
+# Decide whether to crawl this url or not. 
+# If you decide to crawl it, return True; otherwise return False.
     try:
         # Break the URL into parts: scheme, netloc, path, query, etc.
         parsed = urlparse(url)
@@ -180,6 +188,16 @@ def is_valid(url):
         # Check if it is within the allowed domains
         domain = parsed.netloc.lower()
         path = parsed.path.lower()
+        query = parsed.query.lower()
+
+        # Exclude GitLab and GitHub links
+        if "gitlab.com" in domain or "github.com" in domain:
+            return False
+
+        # Exclude calendar and event-related URLs
+        if "/calendar" in path or "/events" in path or "date=" in query or "year=" in query or "month=" in query:
+            scrap_logger.info(f"Skipping calendar/event URL: {url}")
+            return False
 
         # Rule for links
         valid_domains = [
@@ -206,7 +224,7 @@ def is_valid(url):
         return False
     
     except TypeError:
-        print ("TypeError for ", parsed)
+        print("TypeError for ", parsed)
         raise
 
 # for report
