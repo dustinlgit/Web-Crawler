@@ -160,7 +160,7 @@ def extract_next_links(url, resp):
             clean_url = normalize(parsed._replace(query="", fragment="").geturl())
             
             # gitlab and github are bad
-            if "gitlab.com" in clean_url or "github.com" in clean_url:
+            if "gitlab.ics.uci.edu" in clean_url or "github.com" in clean_url:
                 scrap_logger.info(f"Skipping GitLab/GitHub URL: {clean_url}")
                 continue
 
@@ -191,7 +191,7 @@ def is_valid(url):
         query = parsed.query.lower()
 
         # Exclude GitLab and GitHub links
-        if "gitlab.com" in domain or "github.com" in domain:
+        if "gitlab.ics.uci.edu" in domain or "github.com" in domain:
             return False
 
         # Exclude calendar and event-related URLs
