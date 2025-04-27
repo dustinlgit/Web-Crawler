@@ -30,12 +30,13 @@ def extract_next_links(url, resp):
     
     # BeautifulSoup will turn the web page into html content so i can find a specific element by tag and more...
     # resp.raw_response.content: the content of the page!
+
     # use the html.parse of beautifulsoup
     soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
     # print(f"response: {resp.raw_response.url}") 
     # print(f"response: {resp.raw_response.content}") 
 
-    # # i will store all the links in a list
+    # i will store all the links in a list
     links = []
     '''    
     legacy version 1:
@@ -70,18 +71,37 @@ def is_valid(url):
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
     try:
+        # Break the URL into parts: scheme, netloc, path, query, etc.
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
-        return not re.match(
-            r".*\.(css|js|bmp|gif|jpe?g|ico"
-            + r"|png|tiff?|mid|mp2|mp3|mp4"
-            + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
-            + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
-            + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
-            + r"|epub|dll|cnf|tgz|sha1"
-            + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+        
+        # Check if it is within the allowed domains
+        domain = parsed.netloc.lower()
+        path = parsed.path.lower()
+
+        # Rule for links
+        valid_domains = [
+            "ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"
+        ]
+        today_uci_path = "/department/information_computer_sciences/"    
+        # Allow any subdomain of the 4 domains
+        if any(domain.endswith(d) for d in valid_domains):
+            return not re.match(
+                r".*\.(css|js|bmp|gif|jpe?g|ico"
+                + r"|png|tiff?|mid|mp2|mp3|mp4"
+                + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
+                + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
+                + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
+                + r"|epub|dll|cnf|tgz|sha1"
+                + r"|thmx|mso|arff|rtf|jar|csv"
+                + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+        
+        # Case for today.uci.edu
+        if domain == "today.uci.edu" and path.startswith(today_uci_path):
+            return True
+
+        return False
 
     except TypeError:
         print ("TypeError for ", parsed)
