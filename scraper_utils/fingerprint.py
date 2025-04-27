@@ -1,5 +1,5 @@
 import hashlib
-from tokenizer import tokenize
+from .tokenizer import tokenize
 
 # do a fingerprint
 # for each page, we need to create a dictionary for {key: the page, value: fingerprint value}
