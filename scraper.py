@@ -53,6 +53,11 @@ def scraper(url, resp):
     if is_attachment_resp(url, resp):
         scrap_logger.warning(f"Skipping {url}: downloads attachment")
         return []
+
+    # Add the is_large_resp check here
+    if is_large_resp(url, resp, threshold=10 * 1024 * 1024):  # 10 MB threshold
+        scrap_logger.warning(f"Skipping {url}: response too large")
+        return []
     
     # parse as html document
     try:
@@ -237,7 +242,7 @@ def is_pdf_resp(url, resp):
 def is_zip_resp(url, resp):
     content_type = resp.raw_response.headers.get("Content-Type", "").lower()
 
-    if "application/zip" is content_type: 
+    if "application/zip" == content_type: 
         return True
     
     return False
