@@ -198,6 +198,11 @@ def is_valid(url):
             scrap_logger.info(f"Skipping calendar/event URL: {url}")
             return False
 
+        # Exclude /pix/ URLs specifically for eppstein
+        if "eppstein" in domain and "/pix/" in path:
+            scrap_logger.info(f"Skipping /pix/ URL: {url}")
+            return False
+
         # Rule for links
         valid_domains = [
             "ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"
