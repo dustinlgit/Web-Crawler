@@ -110,7 +110,7 @@ def scraper(url, resp):
             unique_links.add(link)
 
     # Save scraping results after the crawler finishes
-    save_to_shelve("scraper_results")
+    # save_to_shelve("scraper_results")
 
     return list(unique_links)
 
