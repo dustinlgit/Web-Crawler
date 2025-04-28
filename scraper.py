@@ -1,21 +1,18 @@
 import re
-from urllib.parse import urlparse, urljoin
-import time
 from bs4 import BeautifulSoup
 import shelve
-
 import io
 import PyPDF2
 import PyPDF2.errors
-
+from urllib.parse import urlparse, urljoin
 from utils import get_logger, normalize
+
+#scraper_util dependendacies
 from scraper_utils.fingerprint import get_fp
 from scraper_utils.similarity import is_similar_to_visited
 from scraper_utils.tokenizer import tokenize
 from scraper_utils.answers import track_longest_page, track_subdomains, track_unique_urls, update_top50_words
 
-TIMEOUT_LIMIT = 60 * 5
-start_time = time.time()
 
 scrap_logger = get_logger("SCRAPPER")
 visited_urls = set()
@@ -199,7 +196,7 @@ def is_valid(url):
             return False
 
         # Exclude /pix/ URLs specifically for eppstein
-        if "~eppstein" in domain and "/pix/" in path:
+        if "~eppestein" in domain and "/pix/" in path:
             scrap_logger.info(f"Skipping /pix/ URL: {url}")
             return False
 
