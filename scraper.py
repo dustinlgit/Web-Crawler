@@ -219,7 +219,7 @@ def is_valid(url):
                 + r"|epub|dll|cnf|tgz|sha1"
                 + r"|thmx|mso|arff|rtf|jar|csv"
                 + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
-                + r"|img|java|war|sql|mpg|ff|sh|ppsx|py|apk|svg|conf|cpp|fig|cls|ipynb|bam|odp|odc|tsv|nb|bib|z|rpm|ma)$", parsed_url.path.lower())
+                + r"|img|java|war|sql|mpg|ff|sh|ppsx|py|apk|svg|conf|cpp|fig|cls|ipynb|bam|odp|odc|tsv|nb|bib|z|rpm|ma)$", parsed.lower())
 
         # Case for today.uci.edu since we only accept this specific path
         if domain == "today.uci.edu" and path.startswith(today_uci_path):
