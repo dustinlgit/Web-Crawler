@@ -13,6 +13,7 @@ from scraper_utils.fingerprint import get_fp
 from scraper_utils.similarity import is_similar_to_visited
 from scraper_utils.tokenizer import tokenize
 
+
 TIMEOUT_LIMIT = 60 * 5
 start_time = time.time()
 
@@ -108,9 +109,6 @@ def scraper(url, resp):
             scrap_logger.info(f"Filtered out invalid URL: {link}")
         else:
             unique_links.add(link)
-
-    # Save scraping results after the crawler finishes
-    # save_to_shelve("scraper_results")
 
     return list(unique_links)
 
