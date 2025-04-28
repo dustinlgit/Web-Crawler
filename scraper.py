@@ -12,7 +12,7 @@ from utils import get_logger, normalize
 from scraper_utils.fingerprint import get_fp
 from scraper_utils.similarity import is_similar_to_visited
 from scraper_utils.tokenizer import tokenize
-
+from scraper_utils.answers import track_longest_page, track_subdomains, track_unique_urls, update_top50_words
 
 TIMEOUT_LIMIT = 60 * 5
 start_time = time.time()
