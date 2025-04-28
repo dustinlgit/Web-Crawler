@@ -111,6 +111,9 @@ def scraper(url, resp):
         else:
             unique_links.add(link)
 
+    # Save scraping results after the crawler finishes
+    save_to_shelve("scraper_results")
+
     return list(unique_links)
 
 ''' IMPLEMENT THIS PART => scraper is important for the worker class'''

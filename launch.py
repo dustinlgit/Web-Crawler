@@ -15,8 +15,7 @@ def main(config_file, restart):
     crawler = Crawler(config, restart)
     crawler.start()
     
-    # Save scraping results after the crawler finishes
-    save_to_shelve("scraper_results")
+    
 
 if __name__ == "__main__":
     parser = ArgumentParser()
