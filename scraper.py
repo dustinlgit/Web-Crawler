@@ -199,7 +199,7 @@ def is_valid(url):
             return False
 
         # Exclude /pix/ URLs specifically for eppstein
-        if "eppstein" in domain and "/pix/" in path:
+        if "~eppstein" in domain and "/pix/" in path:
             scrap_logger.info(f"Skipping /pix/ URL: {url}")
             return False
 
