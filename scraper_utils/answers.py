@@ -18,12 +18,26 @@ def track_unique_urls(url, visited_urls):
     
 def track_subdomains(url, subdomain_count):
     """Track subdomains count."""
-    subdomain = urlparse(url).netloc.split('.')[0]
-    if subdomain in subdomain_count:
-        subdomain_count[subdomain] += 1
-    else:
-        subdomain_count[subdomain] = 1
+    #subdomain = urlparse(url).netloc.split('.')[0]
+    #if subdomain in subdomain_count:
+     #   subdomain_count[subdomain] += 1
+    #else:
+     #   subdomain_count[subdomain] = 1
+    """Track full subdomains for allowed domains."""
+    parsed = urlparse(url)
+    netloc = parsed.netloc.lower()
+
+    if netloc.endswith(".ics.uci.edu") or \
+       netloc.endswith(".cs.uci.edu") or \
+       netloc.endswith(".informatics.uci.edu") or \
+       netloc.endswith(".stat.uci.edu") or \
+       (netloc == "today.uci.edu" and parsed.path.startswith("/department/information_computer_sciences/")):
         
+        if netloc in subdomain_count:
+            subdomain_count[netloc] += 1
+        else:
+            subdomain_count[netloc] = 1
+                
 def track_longest_page(url, text):
     """Track the longest page in terms of word count."""
     words = text.split()

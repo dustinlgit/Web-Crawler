@@ -6,6 +6,7 @@ import PyPDF2
 import PyPDF2.errors
 from urllib.parse import urlparse, urljoin
 from utils import get_logger, normalize
+from collections import defaultdict #change dict usage
 
 #scraper_util dependendacies
 from scraper_utils.fingerprint import get_fp
@@ -41,20 +42,17 @@ def scraper(url, resp):
     if is_pdf_resp(url, resp):
         scrap_logger.warning(f"Skipping {url}: pdf file")
         return []
-    
     if is_zip_resp(url, resp):
         scrap_logger.warning(f"Skipping {url}: zip file")
         return []
-
     if is_attachment_resp(url, resp):
         scrap_logger.warning(f"Skipping {url}: downloads attachment")
         return []
-
     # Add the is_large_resp check here
     if is_large_resp(url, resp, threshold=10 * 1024 * 1024):  # 10 MB threshold
         scrap_logger.warning(f"Skipping {url}: response too large")
         return []
-    
+
     # parse as html document
     try:
         # Get the text from the html response
@@ -109,8 +107,9 @@ def scraper(url, resp):
 
     return list(unique_links)
 
-''' IMPLEMENT THIS PART => scraper is important for the worker class'''
 
+
+# this part is 100% done for sure
 def extract_next_links(url, resp):
     # Implementation required.
     # url: the URL that was used to get the page
@@ -152,7 +151,7 @@ def extract_next_links(url, resp):
             abs_url = urljoin(url, link)
             parsed = urlparse(abs_url)
 
-            # remove anyhting that starts iwth # sincei  keep seeing this and it means nothing
+            # remove anyhting that starts iwth # since I keep seeing this and it means nothing
             clean_url = normalize(parsed._replace(query="", fragment="").geturl())
             
             # gitlab and github are bad
@@ -185,20 +184,33 @@ def is_valid(url):
         domain = parsed.netloc.lower()
         path = parsed.path.lower()
         query = parsed.query.lower()
-
+    # -----------------------------------EXLCUSION LINKS  FOR TRAPS OVER HERE-----------------------------------------------
         # Exclude GitLab and GitHub links
         if "gitlab.ics.uci.edu" in domain or "github.com" in domain:
+            scrap_logger.info(f"Skipping github/gitlab URL: {url}")
             return False
-
         # Exclude calendar and event-related URLs
         if "/events_calendar" in path or "/calendar" in path or "/events" in path or "date=" in query or "year=" in query or "month=" in query:
             scrap_logger.info(f"Skipping calendar/event URL: {url}")
             return False
-
-        # Exclude /pix/ URLs specifically for eppstein
+        # exclude all the unecsseary images from eppestein (takes forever to load and they are all the same anyways)
         if "~eppestein" in domain and "/pix/" in path:
             scrap_logger.info(f"Skipping /pix/ URL: {url}")
             return False
+        # Avoid infinite trap pattern and identifier segment
+        MAX_DEPTH = 8
+        MAX_SEGMENT_LENGTH = 20
+
+        # Split the URL path into segments
+        path_segments = [segment for segment in parsed.path.split('/') if segment]
+
+        # Check depth and segment length in one loop
+        for i, segment in enumerate(path_segments):
+            if i > MAX_DEPTH:  # Check for path depth
+                return False
+            if segment.isalnum() and len(segment) > MAX_SEGMENT_LENGTH:  # Check for long alphanumeric segments
+                return False
+
 
         # Rule for links
         valid_domains = [
@@ -229,7 +241,15 @@ def is_valid(url):
         print("TypeError for ", parsed)
         raise
 
-# for report
+
+
+
+
+
+
+
+
+# for report --------------------------------------------------
 def save_to_shelve(filename="scraper_results"):
     """
     Save the scraping results to a shelve database.
