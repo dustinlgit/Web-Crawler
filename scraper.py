@@ -38,6 +38,16 @@ def scraper(url, resp):
         else:
             scrap_logger.warning(f"Skipping URL {url}: Invalid response or status {resp.status}")
             return []
+    
+    # Parse URL and remove fragment
+    parsed = urlparse(url)
+    clean_url = normalize(parsed._replace(fragment="").geturl())
+    # Prevent cycles by checking visited URLs
+    if clean_url in visited_urls:
+        scrap_logger.info(f"Skipping URL due to cycle: {url}")
+        return []
+    # Add the normalized URL to visited set
+    visited_urls.add(clean_url)
 
     if is_pdf_resp(url, resp):
         scrap_logger.warning(f"Skipping {url}: pdf file")
@@ -67,7 +77,7 @@ def scraper(url, resp):
     except Exception as e:
         scrap_logger.fatal(f"Error parsing {url}: {e}")
     
-    track_unique_urls(url, visited_urls)
+    track_unique_urls(clean_url, visited_urls) #changed to pass defragged url
     track_subdomains(url, subdomain_count)
     soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
     text = soup.get_text()
