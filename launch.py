@@ -5,7 +5,8 @@ from utils.server_registration import get_cache_server
 from utils.config import Config
 from crawler import Crawler
 
-from scraper import save_to_shelve 
+from scraper import save_to_shelve, show_result
+
 
 def main(config_file, restart):
     cparser = ConfigParser()
@@ -17,6 +18,7 @@ def main(config_file, restart):
     
     # Save scraping results after the crawler finishes
     save_to_shelve("scraper_results")
+    show_result("scraper_results")
 
 if __name__ == "__main__":
     parser = ArgumentParser()

@@ -6,14 +6,13 @@ import PyPDF2
 import PyPDF2.errors
 from urllib.parse import urlparse, urljoin
 from utils import get_logger, normalize
-from collections import defaultdict #change dict usage
+from collections import defaultdict  # change dict usage
 
-#scraper_util dependendacies
+# scraper_util dependendacies
 from scraper_utils.fingerprint import get_fp
 from scraper_utils.similarity import is_similar_to_visited
 from scraper_utils.tokenizer import tokenize
-from scraper_utils.answers import track_longest_page, track_subdomains, track_unique_urls, update_top50_words
-
+from scraper_utils.answers import track_subdomains, update_top50_words
 
 scrap_logger = get_logger("SCRAPPER")
 visited_urls = set()
@@ -26,6 +25,8 @@ top50words = {}
 subdomain_count = {}
 top50words = {}
 
+
+
 def scraper(url, resp):
     global longest_page_word_count
 
@@ -34,11 +35,11 @@ def scraper(url, resp):
             redirect_url = resp.raw_response.headers.get("Location")
 
             scrap_logger.warning(f"Status {resp.status}: Redirecting {url} -> {redirect_url}")
-            return  [redirect_url] if is_valid(redirect_url) else []
+            return [redirect_url] if is_valid(redirect_url) else []
         else:
             scrap_logger.warning(f"Skipping URL {url}: Invalid response or status {resp.status}")
             return []
-    
+
     # Parse URL and remove fragment
     parsed = urlparse(url)
     clean_url = normalize(parsed._replace(fragment="").geturl())
@@ -69,37 +70,39 @@ def scraper(url, resp):
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
 
         # Remove the text of CSS, JS, metadata, alter for JS, embeded websites
-        for markup in soup.find_all(["style", "script", "meta", "noscript", "iframe"]):  
+        for markup in soup.find_all(["style", "script", "meta", "noscript", "iframe"]):
             markup.decompose()  # remove all markups stated above
-        
+
         # soup contains only human-readable texts now to be compared near-duplicate
         text = soup.get_text(separator=" ", strip=True)
     except Exception as e:
         scrap_logger.fatal(f"Error parsing {url}: {e}")
-    
-    track_unique_urls(clean_url, visited_urls) #changed to pass defragged url
+
+    track_unique_urls(clean_url, visited_urls)  # changed to pass defragged url
+    print(unique_count)
     track_subdomains(url, subdomain_count)
-    soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+    # soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
     text = soup.get_text()
     track_longest_page(url, text)
+    print(longest_page_url)
     update_top50_words(text, top50words)
 
     ''' FINGERPRINT CODE STARTS HERE '''
-    #create fingerprint
-    #decode content to string because its a byte
+    # create fingerprint
+    # decode content to string because its a byte
     page_content = resp.raw_response.content.decode('utf-8', errors='ignore')
     fingerprint = tuple(get_fp(page_content))
 
     # then check if the curr page is a near dupe of ANY prev page
-        #if it is a dupe, then we dont add it, so SKIP scrawling the page
+    # if it is a dupe, then we dont add it, so SKIP scrawling the page
     if is_similar_to_visited(fingerprint, visited_sites_fingerprint, THRESHOLD):
         print(f"Skipping duplicate page: {url}")
-        return [] # So that we skip crawling when its a dupe/near-dupe
-    
+        return []  # So that we skip crawling when its a dupe/near-dupe
+
     # If it is not a dupe then add it to the visted set
     visited_sites_fingerprint.add(fingerprint)
     ''' FINGERPRINT CODE ENDS HERE '''
-    
+
     # We extract the links, all of them from the page
     links = extract_next_links(url, resp)
     # Then just return the links that need to be crawled
@@ -118,7 +121,6 @@ def scraper(url, resp):
     return list(unique_links)
 
 
-
 # this part is 100% done for sure
 def extract_next_links(url, resp):
     # Implementation required.
@@ -135,13 +137,13 @@ def extract_next_links(url, resp):
     if resp.status != 200:
         print(f'Error code: {resp.error}')
         return []
-    
+
     # BeautifulSoup will turn the web page into html content so i can find a specific element by tag and more...
     # resp.raw_response.content: the content of the page!
 
     # use the html.parse of beautifulsoup
-    # print(f"response: {resp.raw_response.url}") 
-    # print(f"response: {resp.raw_response.content}") 
+    # print(f"response: {resp.raw_response.url}")
+    # print(f"response: {resp.raw_response.content}")
 
     # i will store all the links in a list
     links = []
@@ -156,14 +158,14 @@ def extract_next_links(url, resp):
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
         for anchor in soup.find_all('a', href=True):
             link = anchor.get('href')
-            
+
             # convert relative url to absolute url
             abs_url = urljoin(url, link)
             parsed = urlparse(abs_url)
 
             # remove anyhting that starts iwth # since I keep seeing this and it means nothing
             clean_url = normalize(parsed._replace(query="", fragment="").geturl())
-            
+
             # gitlab and github are bad
             if "gitlab.ics.uci.edu" in clean_url or "github.com" in clean_url:
                 scrap_logger.info(f"Skipping GitLab/GitHub URL: {clean_url}")
@@ -173,7 +175,7 @@ def extract_next_links(url, resp):
                 scrap_logger.info("Skipping empty or malformed URL")
                 continue
 
-            # print(f"Found link: {clean_url}") 
+            # print(f"Found link: {clean_url}")
             links.append(clean_url)
 
     except Exception as e:
@@ -181,20 +183,21 @@ def extract_next_links(url, resp):
 
     return list(links)
 
+
 def is_valid(url):
-# Decide whether to crawl this url or not. 
-# If you decide to crawl it, return True; otherwise return False.
+    # Decide whether to crawl this url or not.
+    # If you decide to crawl it, return True; otherwise return False.
     try:
         # Break the URL into parts: scheme, netloc, path, query, etc.
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
-        
+
         # Check if it is within the allowed domains
         domain = parsed.netloc.lower()
         path = parsed.path.lower()
         query = parsed.query.lower()
-    # -----------------------------------EXLCUSION LINKS  FOR TRAPS OVER HERE-----------------------------------------------
+        # -----------------------------------EXLCUSION LINKS  FOR TRAPS OVER HERE-----------------------------------------------
         # Exclude GitLab and GitHub links
         if "gitlab.ics.uci.edu" in domain or "github.com" in domain:
             scrap_logger.info(f"Skipping github/gitlab URL: {url}")
@@ -221,12 +224,11 @@ def is_valid(url):
             if segment.isalnum() and len(segment) > MAX_SEGMENT_LENGTH:  # Check for long alphanumeric segments
                 return False
 
-
         # Rule for links
         valid_domains = [
             "ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"
         ]
-        today_uci_path = "/department/information_computer_sciences/"    
+        today_uci_path = "/department/information_computer_sciences/"
         # Allow any subdomain of the 4 domains
         if any(domain.endswith(d) for d in valid_domains):
             return not re.match(
@@ -238,7 +240,8 @@ def is_valid(url):
                 + r"|epub|dll|cnf|tgz|sha1"
                 + r"|thmx|mso|arff|rtf|jar|csv"
                 + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
-                + r"|img|java|war|sql|mpg|ff|sh|ppsx|py|apk|svg|conf|cpp|fig|cls|ipynb|bam|odp|odc|tsv|nb|bib|z|rpm|ma)$", parsed.path.lower())
+                + r"|img|java|war|sql|mpg|ff|sh|ppsx|py|apk|svg|conf|cpp|fig|cls|ipynb|bam|odp|odc|tsv|nb|bib|z|rpm|ma)$",
+                parsed.path.lower())
 
         # Case for today.uci.edu since we only accept this specific path
         if domain == "today.uci.edu" and path.startswith(today_uci_path):
@@ -246,20 +249,29 @@ def is_valid(url):
 
         # True conditions weren't triggered so we exit
         return False
-    
+
     except TypeError:
         print("TypeError for ", parsed)
         raise
 
 
-
-
-
-
-
-
-
 # for report --------------------------------------------------
+def track_unique_urls(url, visited_urls):
+    """Track unique URLs."""
+    clean_url = urlparse(url)._replace(fragment="").geturl()
+    visited_urls.add(clean_url)
+    global unique_count
+    unique_count = len(visited_urls)
+
+def track_longest_page(url, text):
+    """Track the longest page in terms of word count."""
+    words = text.split()
+    word_count = len(words)
+    global longest_page_word_count, longest_page_url
+    if word_count > longest_page_word_count:
+        longest_page_url = url
+        longest_page_word_count = word_count
+
 def save_to_shelve(filename="scraper_results"):
     """
     Save the scraping results to a shelve database.
@@ -272,47 +284,74 @@ def save_to_shelve(filename="scraper_results"):
             db['top50words'] = sorted(top50words.items(), key=lambda x: x[1], reverse=True)[:50]
             db['subdomain_count'] = subdomain_count
         scrap_logger.info(f"Scraping results saved to {filename}.")
+
     except Exception as e:
         scrap_logger.error(f"Error saving to shelve: {e}")
 
+def show_result(filename="scraper_results"):
+    with shelve.open(filename) as db:
+        unique_count = db.get('unique_count')
+        print(f"Unique Count: {unique_count}")
+
+        longest_page_url = db.get('longest_page_url')
+        print(f"Longest Page URL: {longest_page_url}")
+
+        longest_page_word_count = db.get('longest_page_word_count')
+        print(f"Longest Page Word Count: {longest_page_word_count}")
+
+        top50words = db.get('top50words')
+        print("\nTop 50 Words:")
+        if top50words:
+            for word, count in top50words:
+                print(f"{word}: {count}")
+
+        subdomain_count = db.get('subdomain_count')
+        print("\nSubdomain Counts:")
+        if subdomain_count:
+            for subdomain, count in subdomain_count.items():
+                print(f"{subdomain}: {count}")
+
 def is_pdf_resp(url, resp):
     content_type = resp.raw_response.headers.get("Content-Type", "").lower()
-    
+
     # First, check Content-Type header
     if "application/pdf" in content_type:
         return True
-    
+
     try:
         with io.BytesIO(resp.raw_response.content) as pdf_stream:
             start = pdf_stream.read(5)
             if start != b"%PDF-":
                 return False  # Definitely not a PDF
-            
+
             # Reset pointer to beginning
             pdf_stream.seek(0)
-            
+
             reader = PyPDF2.PdfReader(pdf_stream)
             return bool(reader.pages)
     except Exception:
         return False
 
+
 def is_zip_resp(url, resp):
     content_type = resp.raw_response.headers.get("Content-Type", "").lower()
 
-    if "application/zip" == content_type: 
+    if "application/zip" == content_type:
         return True
-    
+
     return False
+
 
 def is_html_resp(url, resp):
     content_type = resp.raw_response.headers.get("Content-Type", "").lower()
 
     if content_type.startswith("text/html"):
         return True
-    
+
     return False
 
-def is_attachment_resp(url, resp): 
+
+def is_attachment_resp(url, resp):
     content_disposition = resp.raw_response.headers.get("Content-Disposition", "").lower()
 
     if "attachment" in content_disposition:
@@ -320,14 +359,15 @@ def is_attachment_resp(url, resp):
 
     return False
 
-def is_large_resp(url, resp, threshold): 
+
+def is_large_resp(url, resp, threshold):
     content_length = resp.raw_response.headers.get("Content-Length", "")
 
     try:
         content_length = int(content_length)
-        if content_length > threshold: 
+        if content_length > threshold:
             return True
-    except: 
+    except:
         return False
-    
+
     return False

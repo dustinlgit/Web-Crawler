@@ -9,12 +9,12 @@ longest_page_word_count = 0
 top50words = {}
 subdomain_count = {}
 
-def track_unique_urls(url, visited_urls):
-    """Track unique URLs."""
-    clean_url = urlparse(url)._replace(fragment="").geturl()
-    visited_urls.add(clean_url)
-    global unique_count
-    unique_count = len(visited_urls)
+# def track_unique_urls(url, visited_urls):
+#     """Track unique URLs."""
+#     clean_url = urlparse(url)._replace(fragment="").geturl()
+#     visited_urls.add(clean_url)
+#     global unique_count
+#     unique_count = len(visited_urls)
     
 def track_subdomains(url, subdomain_count):
     """Track subdomains count."""
@@ -38,14 +38,14 @@ def track_subdomains(url, subdomain_count):
         else:
             subdomain_count[netloc] = 1
                 
-def track_longest_page(url, text):
-    """Track the longest page in terms of word count."""
-    words = text.split()
-    word_count = len(words)
-    global longest_page_word_count, longest_page_url
-    if word_count > longest_page_word_count:
-        longest_page_url = url
-        longest_page_word_count = word_count
+# def track_longest_page(url, text):
+#     """Track the longest page in terms of word count."""
+#     words = text.split()
+#     word_count = len(words)
+#     global longest_page_word_count, longest_page_url
+#     if word_count > longest_page_word_count:
+#         longest_page_url = url
+#         longest_page_word_count = word_count
         
 def update_top50_words(text, top50words):
     """Update the top 50 words."""
