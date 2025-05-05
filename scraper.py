@@ -29,11 +29,13 @@ top50words = {}
 
 def scraper(url, resp):
     global longest_page_word_count
-
-    if resp.status != 200 or resp.raw_response is None:
+    if resp.status is None or resp.raw_response is None:
+        scrap_logger.warning(f"Skipping URL {url}: Missing response status or raw response")
+        return []
+        
+    if resp.status != 200:
         if resp.status >= 300 and resp.status < 400:
             redirect_url = resp.raw_response.headers.get("Location")
-
             scrap_logger.warning(f"Status {resp.status}: Redirecting {url} -> {redirect_url}")
             return [redirect_url] if is_valid(redirect_url) else []
         else:
@@ -288,28 +290,63 @@ def save_to_shelve(filename="scraper_results"):
     except Exception as e:
         scrap_logger.error(f"Error saving to shelve: {e}")
 
-def show_result(filename="scraper_results"):
-    with shelve.open(filename) as db:
+# def show_result(filename="scraper_results"):
+#     with shelve.open(filename) as db:
+#         unique_count = db.get('unique_count')
+#         print(f"Unique Count: {unique_count}")
+
+#         longest_page_url = db.get('longest_page_url')
+#         print(f"Longest Page URL: {longest_page_url}")
+
+#         longest_page_word_count = db.get('longest_page_word_count')
+#         print(f"Longest Page Word Count: {longest_page_word_count}")
+
+#         top50words = db.get('top50words')
+#         print("\nTop 50 Words:")
+#         if top50words:
+#             for word, count in top50words:
+#                 print(f"{word}: {count}")
+
+#         subdomain_count = db.get('subdomain_count')
+#         print("\nSubdomain Counts:")
+#         if subdomain_count:
+#             for subdomain, count in subdomain_count.items():
+#                 print(f"{subdomain}: {count}")
+
+
+def show_result(filename="scraper_results", output_file="scraper_output.txt"):
+    with shelve.open(filename) as db, open(output_file, "w", encoding="utf-8") as f:
         unique_count = db.get('unique_count')
+        f.write(f"Unique Count: {unique_count}\n")
         print(f"Unique Count: {unique_count}")
 
         longest_page_url = db.get('longest_page_url')
+        f.write(f"Longest Page URL: {longest_page_url}\n")
         print(f"Longest Page URL: {longest_page_url}")
 
         longest_page_word_count = db.get('longest_page_word_count')
+        f.write(f"Longest Page Word Count: {longest_page_word_count}\n")
         print(f"Longest Page Word Count: {longest_page_word_count}")
 
         top50words = db.get('top50words')
+        f.write("\nTop 50 Words:\n")
         print("\nTop 50 Words:")
         if top50words:
             for word, count in top50words:
-                print(f"{word}: {count}")
+                line = f"{word}: {count}"
+                f.write(line + "\n")
+                print(line)
 
         subdomain_count = db.get('subdomain_count')
+        f.write("\nSubdomain Counts:\n")
         print("\nSubdomain Counts:")
         if subdomain_count:
-            for subdomain, count in subdomain_count.items():
-                print(f"{subdomain}: {count}")
+            for subdomain in sorted(subdomain_count.keys()):
+                count = subdomain_count[subdomain]
+                line = f"{subdomain}: {count}"
+                f.write(line + "\n")
+                print(line)
+
 
 def is_pdf_resp(url, resp):
     content_type = resp.raw_response.headers.get("Content-Type", "").lower()

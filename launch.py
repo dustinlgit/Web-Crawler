@@ -13,12 +13,13 @@ def main(config_file, restart):
     cparser.read(config_file)
     config = Config(cparser)
     config.cache_server = get_cache_server(config, restart)
+    # config.cache_server = None
     crawler = Crawler(config, restart)
     crawler.start()
     
     # Save scraping results after the crawler finishes
     save_to_shelve("scraper_results")
-    show_result("scraper_results")
+    show_result()
 
 if __name__ == "__main__":
     parser = ArgumentParser()
